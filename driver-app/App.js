@@ -5,12 +5,30 @@ import {
 } from 'react-native'
 import * as Location from 'expo-location'
 import * as TaskManager from 'expo-task-manager'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as FileSystem from 'expo-file-system'
 import Constants from 'expo-constants'
 
 const LOCATION_TASK = 'nrc-background-location'
-const STORAGE_KEY = '@nrc_truck_id'
+const INFO_PATH = FileSystem.documentDirectory + 'truck_info.json'
 const API_URL = Constants.expoConfig?.extra?.apiUrl || 'https://nrc-tms-api.onrender.com'
+
+async function loadTruckId() {
+  try {
+    const data = await FileSystem.readAsStringAsync(INFO_PATH)
+    const parsed = JSON.parse(data)
+    return parsed.truck_id || null
+  } catch { return null }
+}
+
+async function saveTruckId(id) {
+  try {
+    await FileSystem.writeAsStringAsync(INFO_PATH, JSON.stringify({ truck_id: id }))
+  } catch {}
+}
+
+async function clearTruckId() {
+  try { await FileSystem.deleteAsync(INFO_PATH, { idempotent: true }) } catch {}
+}
 
 TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (error) return
@@ -21,7 +39,7 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
       const { latitude, longitude } = loc.coords
       const speed = loc.coords.speed ? Math.round(loc.coords.speed * 3.6) : 0
       try {
-        const truckId = await AsyncStorage.getItem(STORAGE_KEY)
+        const truckId = await loadTruckId()
         if (truckId) {
           await fetch(`${API_URL}/api/location`, {
             method: 'POST',
@@ -48,7 +66,7 @@ export default function App() {
   const appState = useRef(AppState.currentState)
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((id) => {
+    loadTruckId().then((id) => {
       if (id) { setSavedId(id); setTruckId(id) }
     }).catch(() => {}).finally(() => setReady(true))
   }, [])
@@ -102,7 +120,7 @@ export default function App() {
 
       setSavedId(id)
       setTracking(true)
-      await AsyncStorage.setItem(STORAGE_KEY, id)
+      await saveTruckId(id)
 
       Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
@@ -137,7 +155,7 @@ export default function App() {
     setSavedId(null)
     setCoords(null)
     setPings(0)
-    await AsyncStorage.removeItem(STORAGE_KEY)
+    await clearTruckId()
   }
 
   const handleStart = () => {
