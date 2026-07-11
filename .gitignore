@@ -9,6 +9,17 @@ lerna-debug.log*
 
 node_modules
 dist
+__pycache__
+*.pyc
+*.pyo
+backend/instance/
+backend/.env
+.env
+!.env.example
+.expo/
+driver-app/node_modules/
+driver-app/.expo/
+
 dist-ssr
 *.local
 
