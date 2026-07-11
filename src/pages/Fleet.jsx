@@ -11,7 +11,11 @@ export default function Fleet() {
   const feedRef = useRef(null)
 
   const load = () =>
-    api.getLiveTrucks().then((r) => setTrucks(r.trucks)).catch(console.error)
+    Promise.all([api.getTrucks(), api.getLiveTrucks()]).then(([all, live]) => {
+      const liveMap = {}
+      live.trucks.forEach((t) => { liveMap[t.id] = t.last_location })
+      setTrucks(all.trucks.map((t) => ({ ...t, last_location: liveMap[t.id] || null })))
+    }).catch(console.error)
 
   useEffect(() => {
     Promise.all([load(), api.getDrivers().then((r) => setDrivers(r.drivers))])
@@ -36,8 +40,12 @@ export default function Fleet() {
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this truck?')) return
-    await api.deleteTruck(id)
-    load()
+    try {
+      await api.deleteTruck(id)
+      load()
+    } catch (err) {
+      alert('Failed to delete: ' + err.message)
+    }
   }
 
   const handleAdd = async (e) => {

@@ -6,10 +6,11 @@ import {
 import * as Location from 'expo-location'
 import * as TaskManager from 'expo-task-manager'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import Constants from 'expo-constants'
 
 const LOCATION_TASK = 'nrc-background-location'
 const STORAGE_KEY = '@nrc_truck_id'
-const API_URL = 'http://localhost:5000'
+const API_URL = Constants.expoConfig?.extra?.apiUrl || 'https://nrc-tms-api.onrender.com'
 
 TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (error) return
@@ -43,12 +44,13 @@ export default function App() {
   const [pings, setPings] = useState(0)
   const [bgMode, setBgMode] = useState(false)
   const [error, setError] = useState('')
+  const [ready, setReady] = useState(false)
   const appState = useRef(AppState.currentState)
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((id) => {
-      if (id) { setSavedId(id); setTruckId(id); startTracking(id) }
-    })
+      if (id) { setSavedId(id); setTruckId(id) }
+    }).catch(() => {}).finally(() => setReady(true))
   }, [])
 
   useEffect(() => {
@@ -65,56 +67,72 @@ export default function App() {
 
   const startTracking = async (id) => {
     setError('')
-    const { status: perm } = await Location.requestForegroundPermissionsAsync()
-    if (perm !== 'granted') { setError('Location permission denied'); return }
-
-    if (Platform.OS === 'android') {
-      const { status: bg } = await Location.requestBackgroundPermissionsAsync()
-      if (bg !== 'granted') { setError('Background location denied'); return }
+    try {
+      const { status: perm } = await Location.requestForegroundPermissionsAsync()
+      if (perm !== 'granted') { setError('Location permission denied'); return }
+    } catch (e) {
+      setError('Could not request location permission')
+      return
     }
 
-    const hasStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)
-    if (hasStarted) await Location.stopLocationUpdatesAsync(LOCATION_TASK)
-
-    await Location.startLocationUpdatesAsync(LOCATION_TASK, {
-      accuracy: Location.Accuracy.High,
-      timeInterval: 5000,
-      distanceInterval: 10,
-      foregroundService: {
-        notificationTitle: 'NRC Driver',
-        notificationBody: 'GPS tracking active — sending location to dispatch',
-      },
-      pausesUpdatesAutomatically: false,
-    })
-
-    setSavedId(id)
-    setTracking(true)
-    await AsyncStorage.setItem(STORAGE_KEY, id)
-
-    Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
-      async (loc) => {
-        const { latitude, longitude } = loc.coords
-        const spd = loc.coords.speed ? Math.round(loc.coords.speed * 3.6) : 0
-        setCoords({ latitude, longitude })
-        setSpeed(spd)
-        setStatus(spd > 5 ? 'on_route' : spd > 0.5 ? 'paused' : 'idle')
-        setPings((p) => p + 1)
-        try {
-          await fetch(`${API_URL}/api/location`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ truck_id: Number(id), latitude, longitude, speed: spd })
-          })
-        } catch {}
+    if (Platform.OS === 'android') {
+      try {
+        const { status: bg } = await Location.requestBackgroundPermissionsAsync()
+        if (bg !== 'granted') { setError('Background location denied'); return }
+      } catch (e) {
+        setError('Could not request background permission')
+        return
       }
-    )
+    }
+
+    try {
+      const hasStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)
+      if (hasStarted) await Location.stopLocationUpdatesAsync(LOCATION_TASK)
+
+      await Location.startLocationUpdatesAsync(LOCATION_TASK, {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 5000,
+        distanceInterval: 10,
+        foregroundService: {
+          notificationTitle: 'NRC Driver',
+          notificationBody: 'GPS tracking active',
+        },
+        pausesUpdatesAutomatically: false,
+      })
+
+      setSavedId(id)
+      setTracking(true)
+      await AsyncStorage.setItem(STORAGE_KEY, id)
+
+      Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+        async (loc) => {
+          const { latitude, longitude } = loc.coords
+          const spd = loc.coords.speed ? Math.round(loc.coords.speed * 3.6) : 0
+          setCoords({ latitude, longitude })
+          setSpeed(spd)
+          setStatus(spd > 5 ? 'on_route' : spd > 0.5 ? 'paused' : 'idle')
+          setPings((p) => p + 1)
+          try {
+            await fetch(`${API_URL}/api/location`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ truck_id: Number(id), latitude, longitude, speed: spd })
+            })
+          } catch {}
+        }
+      )
+    } catch (e) {
+      setError('Failed to start tracking: ' + e.message)
+    }
   }
 
   const stopTracking = async () => {
-    if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) {
-      await Location.stopLocationUpdatesAsync(LOCATION_TASK)
-    }
+    try {
+      if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK)
+      }
+    } catch {}
     setTracking(false)
     setSavedId(null)
     setCoords(null)
@@ -130,6 +148,8 @@ export default function App() {
     startTracking(truckId.trim())
   }
 
+  if (!ready) return null
+
   if (!tracking) {
     return (
       <SafeAreaView style={s.container}>
@@ -141,6 +161,12 @@ export default function App() {
           <Text style={s.subtitle}>National Resolve Carrier</Text>
 
           {error ? <Text style={s.error}>{error}</Text> : null}
+
+          {savedId && (
+            <TouchableOpacity style={s.resumeBtn} onPress={() => startTracking(savedId)}>
+              <Text style={s.resumeBtnText}>Resume tracking (Truck #{savedId})</Text>
+            </TouchableOpacity>
+          )}
 
           <Text style={s.label}>Enter your Truck ID</Text>
           <TextInput
@@ -202,8 +228,7 @@ export default function App() {
 
         {coords && (
           <TouchableOpacity style={s.mapBtn} onPress={() => {
-            const url = `https://www.google.com/maps?q=${coords.latitude},${coords.longitude}`
-            Linking.openURL(url).catch(() => {})
+            Linking.openURL(`https://www.google.com/maps?q=${coords.latitude},${coords.longitude}`).catch(() => {})
           }}>
             <Text style={s.mapBtnText}>Open in Google Maps</Text>
           </TouchableOpacity>
@@ -211,8 +236,10 @@ export default function App() {
 
         <Text style={s.bgLabel}>
           <Text style={{ fontWeight: '700', color: '#e8edf5' }}>✓ Background mode active</Text>
-          {'\n'}GPS continues tracking even when phone is locked or app is minimized.
+          {'\n'}GPS continues tracking even when phone is locked.
         </Text>
+
+        {error ? <Text style={s.error}>{error}</Text> : null}
 
         <TouchableOpacity style={s.stopBtn} onPress={stopTracking}>
           <Text style={s.stopBtnText}>Stop Tracking</Text>
@@ -247,6 +274,12 @@ const s = StyleSheet.create({
     backgroundColor: '#3b82f6', borderRadius: 8, padding: 16, alignItems: 'center'
   },
   btnText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  resumeBtn: {
+    backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: 8,
+    padding: 12, alignItems: 'center', marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(59,130,246,0.2)'
+  },
+  resumeBtnText: { color: '#3b82f6', fontWeight: '600', fontSize: 13 },
   error: {
     color: '#ef4444', fontSize: 13, textAlign: 'center',
     backgroundColor: 'rgba(239,68,68,0.1)', padding: 10, borderRadius: 8, marginBottom: 16

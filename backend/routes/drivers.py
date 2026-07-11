@@ -63,6 +63,13 @@ def update_driver(driver_id):
 @jwt_required()
 def delete_driver(driver_id):
     driver = Driver.query.get_or_404(driver_id)
+
+    from models.truck import Truck
+    from models.route import Route
+
+    Truck.query.filter_by(driver_id=driver_id).update({"driver_id": None})
+    Route.query.filter_by(driver_id=driver_id).update({"driver_id": None})
+
     db.session.delete(driver)
     db.session.commit()
     return jsonify({"message": "Driver deleted"}), 200

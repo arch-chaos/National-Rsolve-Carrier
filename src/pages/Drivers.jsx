@@ -13,8 +13,12 @@ export default function Drivers() {
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this driver?')) return
-    await api.deleteDriver(id)
-    load()
+    try {
+      await api.deleteDriver(id)
+      load()
+    } catch (err) {
+      alert('Failed to delete: ' + err.message)
+    }
   }
 
   const handleAdd = async (e) => {

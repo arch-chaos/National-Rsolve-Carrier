@@ -85,6 +85,13 @@ def update_truck(truck_id):
 @jwt_required()
 def delete_truck(truck_id):
     truck = Truck.query.get_or_404(truck_id)
+
+    from models.route import Route
+    from models.location_log import LocationLog
+
+    Route.query.filter_by(truck_id=truck_id).update({"truck_id": None})
+    LocationLog.query.filter_by(truck_id=truck_id).delete()
+
     db.session.delete(truck)
     db.session.commit()
     return jsonify({"message": "Truck deleted"}), 200
