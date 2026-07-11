@@ -36,8 +36,7 @@
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
         }
-      ],
-      "expo-asset"
+      ]
     ],
     "extra": {
       "apiUrl": "https://nrc-tms-api.onrender.com",
