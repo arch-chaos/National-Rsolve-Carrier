@@ -74,6 +74,10 @@ export default function Fleet() {
         </button>
       </div>
 
+      <div className="card mb" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', padding: '12px 16px', borderRadius: 10, fontSize: 13 }}>
+        <strong>Driver GPS:</strong> Drivers log in with their <strong>Driver Code</strong> (Drivers page). The system auto-assigns the truck from their route. Truck Codes shown here are for reference only.
+      </div>
+
       {showForm && (
         <div className="card mb">
           <div className="card-header"><h3>New Truck</h3></div>
@@ -118,22 +122,29 @@ export default function Fleet() {
           ) : (
             <table className="table">
               <thead>
-                <tr>
-                  <th>Vehicle</th>
-                  <th>Status</th>
-                  <th>Driver</th>
-                  <th>Last Location</th>
-                  <th>Speed</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trucks.map((t) => {
-                  const loc = t.last_location
-                  return (
-                    <tr key={t.id}>
-                      <td className="td-name">{t.plate_number}</td>
-                      <td><span className={`badge badge-${t.status}`}>{t.status}</span></td>
+                  <tr>
+                    <th>ID</th>
+                    <th>Vehicle</th>
+                    <th>Access Code</th>
+                    <th>Status</th>
+                    <th>Driver</th>
+                    <th>Last Location</th>
+                    <th>Speed</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trucks.map((t) => {
+                    const loc = t.last_location
+                    return (
+                      <tr key={t.id}>
+                        <td><span className="badge" style={{background:'var(--blue-bg)',color:'var(--blue)'}}>{t.id}</span></td>
+                        <td className="td-name">{t.plate_number}</td>
+                        <td><code style={{
+                          background: 'rgba(59,130,246,0.08)', padding: '2px 8px', borderRadius: 4,
+                          fontSize: 13, fontWeight: 700, color: '#3b82f6', letterSpacing: 2, cursor: 'pointer'
+                        }} onClick={() => { navigator.clipboard?.writeText(t.access_code); alert('Copied: ' + t.access_code) }}>{t.access_code}</code></td>
+                        <td><span className={`badge badge-${t.status}`}>{t.status}</span></td>
                       <td>{t.driver?.name || '—'}</td>
                       <td>{loc ? `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}` : '—'}</td>
                       <td>{loc ? `${loc.speed?.toFixed(0) || 0} km/h` : '—'}</td>

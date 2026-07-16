@@ -1,11 +1,17 @@
+import secrets, string
 from . import db
 from datetime import datetime, timezone
+
+
+def gen_code():
+    return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
 
 class Driver(db.Model):
     __tablename__ = "drivers"
 
     id = db.Column(db.Integer, primary_key=True)
+    access_code = db.Column(db.String(6), unique=True, nullable=False, default=gen_code)
     name = db.Column(db.String(120), nullable=False)
     phone = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)
@@ -23,6 +29,7 @@ class Driver(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "access_code": self.access_code,
             "name": self.name,
             "phone": self.phone,
             "email": self.email,

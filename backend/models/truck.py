@@ -1,11 +1,17 @@
+import secrets, string
 from . import db
 from datetime import datetime, timezone
+
+
+def gen_code():
+    return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
 
 class Truck(db.Model):
     __tablename__ = "trucks"
 
     id = db.Column(db.Integer, primary_key=True)
+    access_code = db.Column(db.String(6), unique=True, nullable=False, default=gen_code)
     plate_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     status = db.Column(
         db.String(20), nullable=False, default="idle"
@@ -29,6 +35,7 @@ class Truck(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "access_code": self.access_code,
             "plate_number": self.plate_number,
             "status": self.status,
             "driver_id": self.driver_id,

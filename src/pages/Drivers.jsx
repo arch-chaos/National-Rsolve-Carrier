@@ -48,6 +48,13 @@ export default function Drivers() {
         </button>
       </div>
 
+      <div className="card mb" style={{
+        background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)',
+        padding: '12px 16px', borderRadius: 10, fontSize: 13
+      }}>
+        <strong>Driver App:</strong> Share the <strong>Access Code</strong> with the driver. They enter this code on the driver page to see their assigned route and truck.
+      </div>
+
       {showForm && (
         <div className="card mb">
           <div className="card-header"><h3>New Driver</h3></div>
@@ -88,6 +95,7 @@ export default function Drivers() {
               <thead>
                 <tr>
                   <th>Name</th>
+                  <th>Access Code</th>
                   <th>Phone</th>
                   <th>Email</th>
                   <th>License</th>
@@ -95,12 +103,16 @@ export default function Drivers() {
                 </tr>
               </thead>
               <tbody>
-                {drivers.map((d) => (
-                  <tr key={d.id}>
-                    <td className="td-name">{d.name}</td>
-                    <td>{d.phone}</td>
-                    <td>{d.email || '—'}</td>
-                    <td>{d.license_number}</td>
+                  {drivers.map((d) => (
+                    <tr key={d.id}>
+                      <td className="td-name">{d.name}</td>
+                      <td><code style={{
+                        background: 'rgba(59,130,246,0.08)', padding: '2px 8px', borderRadius: 4,
+                        fontSize: 13, fontWeight: 700, color: '#3b82f6', letterSpacing: 2, cursor: 'pointer'
+                      }} onClick={() => { navigator.clipboard?.writeText(d.access_code); alert('Copied: ' + d.access_code) }}>{d.access_code}</code></td>
+                      <td>{d.phone}</td>
+                      <td>{d.email || '—'}</td>
+                      <td>{d.license_number}</td>
                     <td>
                       <button className="btn btn-sm btn-danger"
                         onClick={() => handleDelete(d.id)}>Delete</button>

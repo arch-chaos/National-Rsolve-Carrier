@@ -73,3 +73,41 @@ def delete_driver(driver_id):
     db.session.delete(driver)
     db.session.commit()
     return jsonify({"message": "Driver deleted"}), 200
+
+
+@drivers_bp.route("/verify", methods=["POST"])
+def verify_driver():
+    data = request.get_json()
+    if not data or not data.get("access_code") or not data.get("plate_number"):
+        return jsonify({"error": "access_code and plate_number are required"}), 400
+
+    driver = Driver.query.filter_by(access_code=data["access_code"].upper()).first()
+    if not driver:
+        return jsonify({"valid": False, "error": "Invalid driver code"}), 200
+
+    from models.route import Route
+    active = Route.query.filter(
+        Route.driver_id == driver.id,
+        Route.status.in_(["pending", "in_progress"])
+    ).first()
+
+    if not active:
+        return jsonify({"valid": False, "error": "No active route assigned. Contact dispatcher."}), 200
+
+    if not active.truck:
+        return jsonify({"valid": False, "error": "No truck assigned to your route. Contact dispatcher."}), 200
+
+    if active.truck.plate_number.upper() != data["plate_number"].upper():
+        return jsonify({"valid": False, "error": "Truck plate does not match your assigned route"}), 200
+
+    return jsonify({
+        "valid": True,
+        "driver": driver.to_dict(),
+        "route": {
+            "id": active.id,
+            "name": active.name,
+            "origin": active.origin,
+            "destination": active.destination,
+        },
+        "truck": active.truck.to_dict(),
+    }), 200

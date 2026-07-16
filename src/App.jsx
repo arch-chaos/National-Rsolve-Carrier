@@ -15,6 +15,9 @@ import './App.css'
 function App() {
   return (
     <AuthProvider>
+      <div className="bubble-1" />
+      <div className="bubble-2" />
+      <div className="bubble-3" />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={

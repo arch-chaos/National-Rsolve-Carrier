@@ -88,6 +88,10 @@ export const api = {
   deleteRoute: (id) =>
     request(`/api/routes/${id}`, { method: 'DELETE' }),
 
+  // Verification (driver app)
+  verifyDriver: (access_code, plate_number) =>
+    request('/api/drivers/verify', { method: 'POST', body: JSON.stringify({ access_code, plate_number }) }),
+
   // Location
   sendLocation: (data) =>
     request('/api/location', { method: 'POST', body: JSON.stringify(data) }),

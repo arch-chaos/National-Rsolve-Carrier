@@ -23,12 +23,12 @@ export default function Dashboard() {
   if (loading) return <div className="loading">Loading dashboard...</div>
 
   const cards = [
-    { label: 'Active Trucks', value: stats.active_trucks, color: 'green' },
-    { label: 'Idle Trucks', value: stats.idle_trucks, color: 'amber' },
-    { label: 'Maintenance', value: stats.maintenance_trucks, color: 'red' },
-    { label: 'Active Routes', value: stats.active_routes, color: 'blue' },
-    { label: 'Completed Today', value: stats.completed_today, color: 'green' },
-    { label: 'On-Time Perf.', value: `${stats.on_time_performance}%`, color: 'blue' },
+    { label: 'Active Trucks', value: stats.active_trucks, color: 'green', icon: '\u{1F69A}' },
+    { label: 'Idle Trucks', value: stats.idle_trucks, color: 'amber', icon: '\u23F8' },
+    { label: 'Maintenance', value: stats.maintenance_trucks, color: 'red', icon: '\u{1F527}' },
+    { label: 'Active Routes', value: stats.active_routes, color: 'blue', icon: '\u{1F4CD}' },
+    { label: 'Completed Today', value: stats.completed_today, color: 'green', icon: '\u2705' },
+    { label: 'On-Time Perf.', value: `${stats.on_time_performance}%`, color: 'blue', icon: '\u23F1' },
   ]
 
   return (
@@ -41,7 +41,10 @@ export default function Dashboard() {
       <div className="stat-grid">
         {cards.map((c) => (
           <div className={`stat-card stat-${c.color}`} key={c.label}>
-            <span className="stat-value">{c.value}</span>
+            <div className="stat-top">
+              <span className="stat-value">{c.value}</span>
+              <span className="stat-icon">{c.icon}</span>
+            </div>
             <span className="stat-label">{c.label}</span>
           </div>
         ))}
