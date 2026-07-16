@@ -38,12 +38,15 @@ def receive_location():
         truck.status = "on_route"
     db.session.commit()
 
-    from app import socketio
-    socketio.emit(
-        "location_update",
-        {"truck_id": truck.id, "latitude": log.latitude, "longitude": log.longitude,
-         "speed": log.speed, "recorded_at": log.recorded_at.isoformat()},
-    )
+    try:
+        from app import socketio
+        socketio.emit(
+            "location_update",
+            {"truck_id": truck.id, "latitude": log.latitude, "longitude": log.longitude,
+             "speed": log.speed, "recorded_at": log.recorded_at.isoformat()},
+        )
+    except Exception:
+        pass
 
     return jsonify({"location": log.to_dict()}), 201
 

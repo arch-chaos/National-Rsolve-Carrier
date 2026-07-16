@@ -23,6 +23,13 @@ export default function Fleet() {
       .finally(() => setLoading(false))
 
     const socket = connectSocket()
+    let polling
+    socket.on('connect_error', () => {
+      polling = setInterval(load, 10000)
+    })
+    socket.on('connect', () => {
+      if (polling) { clearInterval(polling); polling = null }
+    })
     socket.on('location_update', (data) => {
       setTrucks((prev) =>
         prev.map((t) =>
@@ -35,7 +42,7 @@ export default function Fleet() {
         [{ msg: `Truck #${data.truck_id} — ${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)} @ ${data.speed?.toFixed(0) || 0} km/h`, time: new Date().toLocaleTimeString('en-US', { hour12: false }) }, ...prev].slice(0, 20)
       )
     })
-    return () => { socket.off('location_update'); disconnectSocket() }
+    return () => { socket.off('location_update'); disconnectSocket(); if (polling) clearInterval(polling) }
   }, [])
 
   const handleDelete = async (id) => {
